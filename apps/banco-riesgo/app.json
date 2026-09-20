@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Banco de riesgo",
+    "slug": "banco-riesgo",
+    "version": "0.0.1",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.pasoapaso.bancoriesgo",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Prueba de riesgo: comprobar que el microfono no capta la propia voz sintetizada.",
+        "NSSpeechRecognitionUsageDescription": "Prueba de riesgo: dictado de expresiones matematicas."
+      }
+    },
+    "android": {
+      "package": "com.pasoapaso.bancoriesgo",
+      "permissions": ["android.permission.RECORD_AUDIO"]
+    },
+    "plugins": ["expo-dev-client", "@jamsch/expo-speech-recognition"]
+  }
+}

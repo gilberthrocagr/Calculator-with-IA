@@ -1,0 +1,19 @@
+name: ci
+
+on: [push, pull_request]
+
+jobs:
+  mates-core:
+    name: bateria del curriculo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+        working-directory: packages/mates-core
+      # La fase 2 no empieza hasta que esto pase al 100%.
+      - run: npm test
+        working-directory: packages/mates-core

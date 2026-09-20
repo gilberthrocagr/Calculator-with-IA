@@ -1,0 +1,13 @@
+{
+  "name": "paso-a-paso",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Calculadora con IA: el LLM traduce y narra, el CAS resuelve.",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  }
+}

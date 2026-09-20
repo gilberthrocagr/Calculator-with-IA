@@ -1,0 +1,57 @@
+import type { CasoBateria } from './tipos.js';
+
+/**
+ * Pasos de ecuacion. Se verifican por proporcionalidad de las formas anuladas,
+ * que es exactamente lo que hacen las operaciones del nivel 1.
+ */
+export const ECUACIONES_LINEALES: CasoBateria[] = [
+  { id: 'el-01', area: 'ecuaciones-lineales', antes: '2*x+5=13', despues: '2*x=8', espera: 'EQUIVALENTE' },
+  { id: 'el-02', area: 'ecuaciones-lineales', antes: '2*x+5=13', despues: '2*x=18', espera: 'NO_EQUIVALENTE', nota: 'suma 5 en vez de restarlo' },
+  { id: 'el-03', area: 'ecuaciones-lineales', antes: '2*x=8', despues: 'x=4', espera: 'EQUIVALENTE' },
+  { id: 'el-04', area: 'ecuaciones-lineales', antes: '2*x=8', despues: 'x=16', espera: 'NO_EQUIVALENTE', nota: 'multiplica en vez de dividir' },
+  { id: 'el-05', area: 'ecuaciones-lineales', antes: '2*x=8', despues: 'x=6', espera: 'NO_EQUIVALENTE', nota: 'resta el coeficiente' },
+  { id: 'el-06', area: 'ecuaciones-lineales', antes: '3*x-7=8', despues: '3*x=15', espera: 'EQUIVALENTE' },
+  { id: 'el-07', area: 'ecuaciones-lineales', antes: '3*x-7=8', despues: '3*x=1', espera: 'NO_EQUIVALENTE', nota: 'resta en vez de sumar' },
+  { id: 'el-08', area: 'ecuaciones-lineales', antes: '3*x=15', despues: 'x=5', espera: 'EQUIVALENTE' },
+  { id: 'el-09', area: 'ecuaciones-lineales', antes: 'x/3=4', despues: 'x=12', espera: 'EQUIVALENTE' },
+  { id: 'el-10', area: 'ecuaciones-lineales', antes: 'x/3=4', despues: 'x=4/3', espera: 'NO_EQUIVALENTE', nota: 'divide en vez de multiplicar' },
+  { id: 'el-11', area: 'ecuaciones-lineales', antes: 'x+7=3', despues: 'x=-4', espera: 'EQUIVALENTE' },
+  { id: 'el-12', area: 'ecuaciones-lineales', antes: 'x+7=3', despues: 'x=4', espera: 'NO_EQUIVALENTE', nota: 'pierde el signo negativo' },
+  { id: 'el-13', area: 'ecuaciones-lineales', antes: '5*x+2=3*x+10', despues: '2*x+2=10', espera: 'EQUIVALENTE' },
+  { id: 'el-14', area: 'ecuaciones-lineales', antes: '5*x+2=3*x+10', despues: '8*x+2=10', espera: 'NO_EQUIVALENTE', nota: 'suma la x del otro lado en vez de restarla' },
+  { id: 'el-15', area: 'ecuaciones-lineales', antes: '2*x+2=10', despues: 'x=4', espera: 'EQUIVALENTE' },
+  { id: 'el-16', area: 'ecuaciones-lineales', antes: '-x=5', despues: 'x=-5', espera: 'EQUIVALENTE' },
+  { id: 'el-17', area: 'ecuaciones-lineales', antes: '-x=5', despues: 'x=5', espera: 'NO_EQUIVALENTE', nota: 'no cambia el signo' },
+  { id: 'el-18', area: 'ecuaciones-lineales', antes: '2*(x+3)=10', despues: '2*x+6=10', espera: 'EQUIVALENTE' },
+  { id: 'el-19', area: 'ecuaciones-lineales', antes: '2*(x+3)=10', despues: 'x+3=5', espera: 'EQUIVALENTE', nota: 'divide entre 2 los dos lados, tambien vale' },
+  { id: 'el-20', area: 'ecuaciones-lineales', antes: '2*(x+3)=10', despues: '2*x+3=10', espera: 'NO_EQUIVALENTE', nota: 'distributiva incompleta' },
+  { id: 'el-21', area: 'ecuaciones-lineales', antes: '4*x-3=2*x+7', despues: '2*x=10', espera: 'EQUIVALENTE' },
+  { id: 'el-22', area: 'ecuaciones-lineales', antes: '4*x-3=2*x+7', despues: '2*x=4', espera: 'NO_EQUIVALENTE', nota: 'pasa el -3 restando' },
+  { id: 'el-23', area: 'ecuaciones-lineales', antes: 'x/2+1=4', despues: 'x/2=3', espera: 'EQUIVALENTE' },
+  { id: 'el-24', area: 'ecuaciones-lineales', antes: 'x/2=3', despues: 'x=6', espera: 'EQUIVALENTE' },
+  { id: 'el-25', area: 'ecuaciones-lineales', antes: '(x+1)/3=2', despues: 'x+1=6', espera: 'EQUIVALENTE' },
+  { id: 'el-26', area: 'ecuaciones-lineales', antes: '(x+1)/3=2', despues: 'x+1=2/3', espera: 'NO_EQUIVALENTE', nota: 'divide el lado derecho' },
+  { id: 'el-27', area: 'ecuaciones-lineales', antes: '3*(x-2)=2*(x+1)', despues: '3*x-6=2*x+2', espera: 'EQUIVALENTE' },
+  { id: 'el-28', area: 'ecuaciones-lineales', antes: '3*x-6=2*x+2', despues: 'x=8', espera: 'EQUIVALENTE' },
+  { id: 'el-29', area: 'ecuaciones-lineales', antes: '3*x-6=2*x+2', despues: 'x=-4', espera: 'NO_EQUIVALENTE', nota: 'signos al agrupar' },
+  { id: 'el-30', area: 'ecuaciones-lineales', antes: '0.5*x=3', despues: 'x=6', espera: 'EQUIVALENTE' },
+];
+
+export const CUADRATICAS: CasoBateria[] = [
+  { id: 'cu-01', area: 'cuadraticas', antes: 'x^2-5*x+6=0', despues: '(x-2)*(x-3)=0', espera: 'EQUIVALENTE' },
+  { id: 'cu-02', area: 'cuadraticas', antes: 'x^2-5*x+6=0', despues: '(x+2)*(x+3)=0', espera: 'NO_EQUIVALENTE', nota: 'signos de las raices' },
+  { id: 'cu-03', area: 'cuadraticas', antes: 'x^2-9=0', despues: '(x-3)*(x+3)=0', espera: 'EQUIVALENTE' },
+  { id: 'cu-04', area: 'cuadraticas', antes: 'x^2=9', despues: 'x=3', espera: 'NO_EQUIVALENTE', nota: 'pierde la raiz negativa: el paso no conserva las soluciones' },
+  { id: 'cu-05', area: 'cuadraticas', antes: 'x^2+2*x+1=0', despues: '(x+1)^2=0', espera: 'EQUIVALENTE' },
+  { id: 'cu-06', area: 'cuadraticas', antes: 'x^2-4=0', despues: 'x^2=4', espera: 'EQUIVALENTE' },
+  { id: 'cu-07', area: 'cuadraticas', antes: 'x^2-4=0', despues: 'x^2=-4', espera: 'NO_EQUIVALENTE', nota: 'no cambia el signo al pasar el termino' },
+  { id: 'cu-08', area: 'cuadraticas', antes: '2*x^2-8=0', despues: 'x^2-4=0', espera: 'EQUIVALENTE' },
+  { id: 'cu-09', area: 'cuadraticas', antes: '2*x^2-8=0', despues: 'x^2-8=0', espera: 'NO_EQUIVALENTE', nota: 'divide solo el primer termino' },
+  { id: 'cu-10', area: 'cuadraticas', antes: 'x^2+x=6', despues: 'x^2+x-6=0', espera: 'EQUIVALENTE' },
+  { id: 'cu-11', area: 'cuadraticas', antes: 'x^2+x=6', despues: 'x^2+x+6=0', espera: 'NO_EQUIVALENTE', nota: 'pasa el 6 sumando' },
+  { id: 'cu-12', area: 'cuadraticas', antes: 'x^2+x-6=0', despues: '(x+3)*(x-2)=0', espera: 'EQUIVALENTE' },
+  { id: 'cu-13', area: 'cuadraticas', antes: 'x^2+x-6=0', despues: '(x-3)*(x+2)=0', espera: 'NO_EQUIVALENTE', nota: 'raices intercambiadas de signo' },
+  { id: 'cu-14', area: 'cuadraticas', antes: '3*x^2=12', despues: 'x^2=4', espera: 'EQUIVALENTE' },
+  { id: 'cu-15', area: 'cuadraticas', antes: '3*x^2=12', despues: 'x^2=36', espera: 'NO_EQUIVALENTE', nota: 'multiplica en vez de dividir' },
+  { id: 'cu-16', area: 'cuadraticas', antes: 'x*(x-4)=0', despues: 'x^2-4*x=0', espera: 'EQUIVALENTE' },
+];

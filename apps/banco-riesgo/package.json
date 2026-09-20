@@ -1,0 +1,26 @@
+{
+  "name": "banco-riesgo",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start --dev-client",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
+  },
+  "dependencies": {
+    "expo": "~57.0.17",
+    "expo-dev-client": "~6.0.0",
+    "expo-speech": "~14.0.0",
+    "@jamsch/expo-speech-recognition": "^57.0.0",
+    "react": "19.1.0",
+    "react-native": "0.86.0",
+    "temml": "^0.13.5",
+    "speech-rule-engine": "^5.0.0-rc.4",
+    "mathsteps-experimental-fork": "0.9.12"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.0",
+    "typescript": "^5.9.0"
+  }
+}

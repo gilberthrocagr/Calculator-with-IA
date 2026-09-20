@@ -1,0 +1,22 @@
+{
+  "name": "@paso-a-paso/mates-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Logica matematica pura: verificador, clasificador, router y motor. Sin dependencias de React Native, para poder correr la bateria en CI sin simulador.",
+  "main": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "bench": "vitest bench --run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "mathjs": "15.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0",
+    "@types/node": "^22.0.0"
+  }
+}
