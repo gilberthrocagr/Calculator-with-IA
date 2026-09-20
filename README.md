@@ -15,6 +15,7 @@ problema y la app lo resuelve **mostrando los pasos**. Espanol primero.
 packages/mates-core/     Logica matematica. TypeScript puro, SIN React Native:
                          la bateria corre en CI en segundos, sin simulador.
   src/verificador/       Verificador de pasos en tres capas
+  src/router/            Clasificador y router: que motor atiende cada entrada
   src/bateria/           271 casos del curriculo
 apps/banco-riesgo/       Banco de pruebas de la fase 0 (no es la app)
 docs/                    Resultados medidos
@@ -27,7 +28,7 @@ docs/                    Resultados medidos
 | 0 | Tres pruebas de riesgo | (c) superada, (b) parcial, **(a) pendiente de iPhone** |
 | 1 | Verificador + bateria en CI | **271/271, 100% deteccion, 100% aceptacion** |
 | 2 | Calculadora nativa | no empezada |
-| 3 | Clasificador, router, nivel 1 | no empezada |
+| 3 | Clasificador, router, nivel 1 | **router hecho, 38 tests**; falta el adaptador N1 |
 | 4 | Servidor, SymPy, streaming | no empezada |
 | 5 | Voz | no empezada |
 
@@ -40,6 +41,33 @@ npm test          # bateria + unitarias
 npm run typecheck
 ```
 
+## El router
+
+Decide que motor atiende cada entrada. **No ejecuta nada y no abre red:** devuelve
+la decision con su motivo y sus rasgos, para que sea auditable y para que la
+bateria de enrutado corra en CI sin motores ni servidor.
+
+| Nivel | Motor | Que le toca |
+|---|---|---|
+| 1 | mathsteps-experimental-fork | Aritmetica, fracciones, terminos semejantes, distributiva, lineales de una variable |
+| 2 | nerdamer-prime | Cuadraticas, factorizacion, radicales, funciones racionales |
+| 3 | SymPy en servidor | Trascendentes, desigualdades, grado >= 3, varias variables, lo que no parsea |
+
+**La regla que justifica el modulo:** mathsteps NO lanza con trigonometria.
+`solveEquation('sin(x) = 1/2')` devuelve 3 pasos y la ecuacion sin tocar, sin un
+solo error en el log. Por eso `sin/cos/tan/log/ln/exp` (y sus inversas,
+hiperbolicas y variantes) se bloquean **antes del nivel 1**, no solo antes de
+nerdamer. Hay test de regresion.
+
+La **operacion** (`simplificar`, `resolver`, `factorizar`, `expandir`) es parte de
+la peticion, no algo que se adivine: `x^2-1` expandido lo hace el nivel 1 y
+factorizado no, porque mathsteps no factoriza. `auto` resuelve si hay `=` y
+simplifica si no.
+
+El **area del temario** es solo una pista para la interfaz y las metricas: el
+router **no** la usa para enrutar. De una expresion suelta no se deduce si el
+alumno queria factorizar o expandir, asi que sin senal clara vale `desconocida`.
+
 ## El verificador
 
 Tres capas, se para en la primera que se pronuncie:
@@ -51,7 +79,7 @@ Tres capas, se para en la primera que se pronuncie:
 | 3 | Muestreo en el plano complejo | Trigonometria, logaritmos, radicales. |
 
 **Medido:** 271 casos, 100% de deteccion de errores (115/115), 100% de aceptacion
-de pasos validos (156/156), **9,6 ms por paso**.
+de pasos validos (156/156), **4,9 ms por paso**.
 
 ### Lo que no se puede tocar sin romperlo
 
@@ -80,6 +108,19 @@ Cada uno de estos puntos costo una depuracion y esta fijado con un test de regre
 6. **Sin evidencia suficiente, el veredicto es INDETERMINADO, jamas
    NO_EQUIVALENTE.** A un alumno no se le dice que se equivoco porque a nosotros
    nos falto muestra.
+
+7. **El grado leido del arbol es el SINTACTICO, no el real.** Sobre la forma
+   anulada de `x^2 + x = x^2 + 3` el recorrido da 2 porque ve un `x^2`;
+   `rationalize` lo colapsa a `x - 3`, grado 1. Sin pasar por `rationalize`, una
+   ecuacion lineal de verdad se va al nivel 2. El recorrido del arbol queda de
+   reserva para cuando `rationalize` lanza (funciones, exponentes no enteros),
+   que es justo donde el recorrido ya responde `null`.
+
+8. **El exponente de una potencia no siempre es un ConstantNode.** Medido en
+   mathjs 15.2.0: en `x^(1/2)` es un **ParenthesisNode** y en `x^-1` es un
+   OperatorNode. Mirando solo `isConstantNode`, `x^(1/2)` no se reconocia como
+   radical y se colaba al nivel 1: justo lo que el router existe para evitar.
+   Si el subarbol no tiene variables libres, se evalua.
 
 ### Limite conocido
 
