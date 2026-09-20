@@ -7,3 +7,4 @@
  * El modelo de lenguaje NO vive aqui. Este paquete solo resuelve y verifica.
  */
 export * from './verificador/index.js';
+export * from './router/index.js';
