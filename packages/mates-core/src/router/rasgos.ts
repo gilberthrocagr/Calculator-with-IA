@@ -253,6 +253,7 @@ export function extraerRasgos(math: InstanciaMath, entrada: string): Rasgos {
       funciones: [],
       trascendentes: [],
       tieneRadicales: false,
+      radicalesSoloNumericos: false,
       tieneDivision: false,
       tieneVariableEnDenominador: false,
       grado: null,
@@ -278,6 +279,7 @@ export function extraerRasgos(math: InstanciaMath, entrada: string): Rasgos {
       funciones: [],
       trascendentes: [],
       tieneRadicales: false,
+      radicalesSoloNumericos: false,
       tieneDivision: false,
       tieneVariableEnDenominador: false,
       grado: null,
@@ -288,6 +290,7 @@ export function extraerRasgos(math: InstanciaMath, entrada: string): Rasgos {
   const funciones = Array.from(nombresDeFuncion(nodo)).sort();
   const trascendentes = interseccion(funciones, FUNCIONES_TRASCENDENTES);
   const radicalesPorFuncion = interseccion(funciones, FUNCIONES_RADICALES).length > 0;
+  const hayRadicales = radicalesPorFuncion || tienePotenciaFraccionaria(nodo);
 
   return {
     entradaValida: true,
@@ -296,7 +299,8 @@ export function extraerRasgos(math: InstanciaMath, entrada: string): Rasgos {
     variables,
     funciones,
     trascendentes,
-    tieneRadicales: radicalesPorFuncion || tienePotenciaFraccionaria(nodo),
+    tieneRadicales: hayRadicales,
+    radicalesSoloNumericos: hayRadicales && variables.length === 0,
     tieneDivision: tieneOperador(nodo, '/'),
     tieneVariableEnDenominador: tieneVariableEnDenominador(nodo, variables),
     grado: gradoPolinomico(math, nodo, variables),

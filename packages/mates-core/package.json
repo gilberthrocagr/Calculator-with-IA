@@ -12,11 +12,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "mathjs": "15.2.0"
+    "mathjs": "15.2.0",
+    "mathsteps-experimental-fork": "^0.9.12"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "typescript": "^5.9.0",
-    "vitest": "^3.2.0",
-    "@types/node": "^22.0.0"
+    "vitest": "^3.2.0"
   }
 }

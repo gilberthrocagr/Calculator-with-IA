@@ -84,6 +84,17 @@ describe('rasgos - deteccion de formas', () => {
     expect(d.esEcuacion).toBe(false);
   });
 
+  it('distingue el radical numerico del que lleva variables', () => {
+    // MEDIDO: mathsteps hace sqrt(8) -> 2 sqrt(2) con reglas KEMU, pero no es
+    // fiable con variables dentro. El router los separa por eso.
+    const num = extraerRasgos(math, 'sqrt(8) + sqrt(2)');
+    expect(num.tieneRadicales).toBe(true);
+    expect(num.radicalesSoloNumericos).toBe(true);
+    const conVar = extraerRasgos(math, 'sqrt(x+1)');
+    expect(conVar.tieneRadicales).toBe(true);
+    expect(conVar.radicalesSoloNumericos).toBe(false);
+  });
+
   it('reconoce radicales escritos de las dos maneras', () => {
     expect(extraerRasgos(math, 'sqrt(x+1)').tieneRadicales).toBe(true);
     expect(extraerRasgos(math, 'x^(1/2)').tieneRadicales).toBe(true);
@@ -149,6 +160,8 @@ describe('router - nivel 1', () => {
     ['2*x + 5 = 13', 'auto'],         // lineal de una variable
     ['x/2 + 1 = 4', 'auto'],          // lineal con denominador constante
     ['x^2 + x = x^2 + 3', 'auto'],    // parece cuadratica, es lineal
+    ['sqrt(8)', 'auto'],              // radical numerico: KEMU_SQRT_FROM_CONST
+    ['sqrt(12) + sqrt(3)', 'auto'],   // medido: -> 3 * sqrt(3)
   ];
 
   for (const [entrada, op] of casos) {
@@ -172,9 +185,19 @@ describe('router - nivel 2', () => {
     expect(d.bloqueosDeNivel1.join(' ')).toContain('no factoriza');
   });
 
-  it('manda los radicales y las racionales a nerdamer', () => {
-    expect(r.enrutar('sqrt(8) + sqrt(2)').nivel).toBe(2);
+  it('manda los radicales CON VARIABLES y las racionales a nerdamer', () => {
+    expect(r.enrutar('sqrt(x+1)').nivel).toBe(2);
+    expect(r.enrutar('sqrt(x) + sqrt(2)').nivel).toBe(2);
     expect(r.enrutar('(x^2-1)/(x-1)').nivel).toBe(2);
+  });
+
+  it('REGRESION: las cuadraticas NO bajan al nivel 1 aunque el brief lo diga', () => {
+    // MEDIDO contra mathsteps 0.9.12: no las resuelve, y etiqueta su ultimo
+    // paso como 'solution' igualmente.
+    //   x^2 = 16         -> solution: x^2 = 16
+    //   x^2 - 5x + 6 = 0 -> solution: x^2 - 5x = -6
+    expect(r.enrutar('x^2 = 16').nivel).toBe(2);
+    expect(r.enrutar('x^2 - 5*x + 6 = 0').nivel).toBe(2);
   });
 });
 

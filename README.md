@@ -17,6 +17,7 @@ packages/mates-core/     Logica matematica. TypeScript puro, SIN React Native:
   src/verificador/       Verificador de pasos en tres capas
   src/router/            Clasificador y router: que motor atiende cada entrada
   src/errores/           Catalogo de errores tipicos, detectados sin LLM
+  src/motor/             Adaptadores de cada nivel. n1 = mathsteps
   src/bateria/           271 casos del curriculo
 apps/banco-riesgo/       Banco de pruebas de la fase 0 (no es la app)
 docs/                    Resultados medidos
@@ -29,7 +30,7 @@ docs/                    Resultados medidos
 | 0 | Tres pruebas de riesgo | (c) superada, (b) parcial, **(a) pendiente de iPhone** |
 | 1 | Verificador + bateria en CI | **271/271, 100% deteccion, 100% aceptacion** |
 | 2 | Calculadora nativa | no empezada |
-| 3 | Clasificador, router, nivel 1 | **router hecho, 38 tests**; falta el adaptador N1 |
+| 3 | Clasificador, router, nivel 1 | **HECHA**: router + adaptador N1, 42+17 tests |
 | 5 | Tutor: catalogo de errores | **catalogo hecho, 40% medido**; faltan maquina de estados y escalera |
 | 4 | Servidor, SymPy, streaming | no empezada |
 | 5 | Voz | no empezada |
@@ -69,6 +70,31 @@ simplifica si no.
 El **area del temario** es solo una pista para la interfaz y las metricas: el
 router **no** la usa para enrutar. De una expresion suelta no se deduce si el
 alumno queria factorizar o expandir, asi que sin senal clara vale `desconocida`.
+
+## El nivel 1: mathsteps, y por que no hay que creerle
+
+`mathsteps-experimental-fork@0.9.12` es lo unico que da pasos con **nombre de
+regla**, offline y gratis. Se carga con `import()` diferido: su build CJS esta
+roto y en Metro hace falta `unstable_enablePackageExports`.
+
+**⚠️ MIDE ANTES DE CREER: mathsteps etiqueta su ultimo paso como `solution`
+aunque no haya resuelto.** Medido en 0.9.12:
+
+```
+x^2 = 16          ->  solution: x^2 = 16        (no toco nada)
+x^2 - 5x + 6 = 0  ->  solution: x^2 - 5x = -6   (a medio hacer)
+sin(x) = 1/2      ->  solution: sin(x) = 1/2    (no toco nada)
+```
+
+Es peor que el fallo conocido de la trigonometria: alli no avanzaba, aqui ademas
+dice que termino. Por eso el adaptador **comprueba la forma del resultado** con
+`pareceResuelta()` y devuelve `resuelto: false` cuando no lo es, en vez de
+propagar la etiqueta. Un falso "no resuelta" solo cuesta escalar al nivel 2; un
+falso "resuelta" le ensena al alumno su propio enunciado como respuesta.
+
+Esto **corrige al brief**, que ponia las cuadraticas factorizables en el nivel 1.
+En cambio el brief acertaba con los radicales numericos (`sqrt(8) -> 2 sqrt(2)`),
+y el router se afino para dejarlos en el nivel 1.
 
 ## El catalogo de errores
 

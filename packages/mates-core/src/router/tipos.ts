@@ -50,6 +50,17 @@ export interface Rasgos {
   trascendentes: string[];
   /** sqrt, cbrt, nthRoot, o una potencia de exponente no entero. */
   tieneRadicales: boolean;
+  /**
+   * Los radicales no llevan variables: sqrt(8), sqrt(12)+sqrt(3).
+   *
+   * MEDIDO contra mathsteps 0.9.12: los resuelve bien con reglas KEMU.
+   *   sqrt(8)            -> 2 sqrt(2)   KEMU_SQRT_FROM_CONST
+   *   sqrt(12) + sqrt(3) -> 3 * sqrt(3)
+   *   sqrt(50)           -> 5 sqrt(2)
+   * Por eso NO bloquean el nivel 1, al contrario que los radicales con
+   * variables, que si van al nivel 2.
+   */
+  radicalesSoloNumericos: boolean;
   /** Hay al menos una division. Distingue 'fracciones' de 'aritmetica'. */
   tieneDivision: boolean;
   /** Division con la variable en el denominador: funcion racional. */

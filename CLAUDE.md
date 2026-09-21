@@ -55,7 +55,7 @@ pantalla y leída en voz alta. Español primero, inglés después.
 | 0(a) | Voz simultánea en iOS | **PENDIENTE** — necesita iPhone físico |
 | 1 | Verificador + batería | **HECHA, 100%** |
 | 2 | Calculadora nativa | no empezada |
-| 3 | Clasificador + router + N1 | **clasificador y router HECHOS** (38 tests); falta el adaptador N1 |
+| 3 | Clasificador + router + N1 | **HECHA** — router (42 tests) + adaptador N1 (17 tests) |
 | 4 | Servidor + SymPy + streaming | no empezada |
 | 5 | **Tutor** — máquina de estados, escalera de pistas, catálogo de errores | **catálogo de errores HECHO** (16 tests, 40% medido); faltan máquina de estados y escalera |
 | 6 | Voz | no empezada |
@@ -86,7 +86,7 @@ Tiene que dar exactamente: **271 casos, 100% de detección (115/115), 100% de
 aceptación (156/156), 34 tests en verde.** Si no da eso, **parar y avisar antes
 de tocar nada**.
 
-Última verificación: **21-sep-2026, todo en verde** (88/88, 115/115, 156/156).
+Última verificación: **21-sep-2026, todo en verde** (107/107, 115/115, 156/156).
 `npm run typecheck` también pasa. Medido en esta máquina: **~4,9 ms por paso**
 (el README decía 9,6 ms de una máquina más lenta; ya está actualizado. El test
 solo exige estar por debajo de 25 ms).
@@ -250,6 +250,39 @@ equivocada. Aritmética 5/15 — la mayoría son errores de orden de operaciones
 (`2+3*4 → 20`), que necesitan otro tipo de detector. Ahí es donde el LLM sí
 aporta, con el catálogo del área delante.
 
+## El nivel 1 (fase 3, completa) — ⚠️ mathsteps miente
+
+`packages/mates-core/src/motor/n1.ts`. Único motor con **pasos con nombre de
+regla**, offline. `import()` diferido: su CJS está roto.
+
+**El hallazgo del 21-sep-2026, que no estaba en ningún brief: mathsteps etiqueta
+su último paso como `solution` aunque no haya resuelto.**
+
+```
+x^2 = 16          ->  solution: x^2 = 16        (no tocó nada)
+x^2 - 5x + 6 = 0  ->  solution: x^2 - 5x = -6   (a medio hacer)
+sin(x) = 1/2      ->  solution: sin(x) = 1/2
+```
+
+Peor que el fallo conocido de la trigonometría: allí no avanzaba, aquí además
+dice que terminó. El adaptador **comprueba la forma** con `pareceResuelta()` y
+devuelve `resuelto: false`; nunca propaga la etiqueta. Un falso «no resuelta»
+cuesta escalar al nivel 2; un falso «resuelta» le enseña al alumno su propio
+enunciado como respuesta.
+
+Otras cuatro cosas medidas, ninguna en el brief:
+
+- **La API no está en `mod.default`** (12 claves, sin `assessUserStep`), sino en
+  el namespace del módulo (31 claves). Usar `import * as ms`.
+- **`solveEquation` exige `unknownVariable`**. Sin ella lanza `unset unknown
+  variable name`.
+- **La mutación en sitio es solo de `solveEquation`.** En `simplifyExpression`
+  cada paso trae un `rootNode` distinto y se puede guardar.
+- **El campo del paso de expresiones es `rootNode`, no `newNode`.**
+
+Y el router se afinó con lo medido: **radicales sin variables → nivel 1**
+(`sqrt(8) → 2 sqrt(2)`, KEMU); con variables → nivel 2. Cuadráticas → nivel 2.
+
 ## El servidor (fase 4) — y cómo NO tocar Deliservy
 
 Hoy **no hay nada alojado** y no hace falta: `mates-core` es puro y no abre red.
@@ -295,7 +328,7 @@ optimizar `max_tokens` y la tasa de acierto de caché vale cien veces más.
   skill y decide qué practicar, probablemente sí. Es decisión de **arquitectura**,
   no de empaquetado: hay que tomarla antes de construir el knowledge tracing de la
   fase 5. Consulta legal obligatoria.
-- **¿Cuadráticas factorizables y radicales numéricos en el nivel 1?** El plan en
-  PDF los pone en nivel 1 (`x²=16 → x=±4`, `√8 → 2√2` por reglas KEMU). Nuestro
-  router los manda al nivel 2, más conservador. **No lo hemos medido nosotros**:
-  se resuelve al construir el adaptador N1, probando contra mathsteps de verdad.
+- ~~¿Cuadráticas factorizables y radicales numéricos en el nivel 1?~~
+  **RESUELTO el 21-sep-2026, midiendo contra mathsteps 0.9.12.** Los radicales
+  numéricos sí (`√8 → 2√2`), y el router se afinó. Las cuadráticas **no**: el
+  brief estaba equivocado. Ver abajo.

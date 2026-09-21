@@ -62,8 +62,11 @@ export function bloqueosDeNivel1(
     );
   }
 
-  if (rasgos.tieneRadicales) {
-    bloqueos.push('hay radicales y el nivel 1 no los maneja con fiabilidad');
+  // MEDIDO: los radicales NUMERICOS si los hace el nivel 1 (reglas KEMU).
+  // sqrt(8) -> 2 sqrt(2), sqrt(12)+sqrt(3) -> 3*sqrt(3). Solo bloquean los que
+  // llevan variables, donde mathsteps no es fiable.
+  if (rasgos.tieneRadicales && !rasgos.radicalesSoloNumericos) {
+    bloqueos.push('hay radicales con variables y el nivel 1 no los maneja con fiabilidad');
   }
 
   if (rasgos.tieneVariableEnDenominador) {
@@ -121,6 +124,13 @@ function elegirNivelSuperior(
   }
 
   if (operacion === 'resolver') {
+    // MEDIDO contra mathsteps 0.9.12, y CONTRA lo que decia el brief: las
+    // cuadraticas factorizables NO las resuelve, y encima etiqueta su ultimo
+    // paso como 'solution'.
+    //   x^2 = 16          -> solution: x^2 = 16       (no toco nada)
+    //   x^2 - 5x + 6 = 0  -> solution: x^2 - 5x = -6  (a medio hacer)
+    // Es el mismo fallo que la trigonometria pero peor, porque dice que
+    // termino. Se quedan en el nivel 2.
     if (rasgos.variables.length === 1 && rasgos.grado === 2) {
       return { nivel: 2, motivo: 'ecuacion cuadratica de una variable: nerdamer' };
     }
@@ -141,7 +151,7 @@ function elegirNivelSuperior(
 
   // simplificar y expandir
   if (rasgos.tieneRadicales) {
-    return { nivel: 2, motivo: 'hay radicales: nerdamer los simplifica' };
+    return { nivel: 2, motivo: 'radicales con variables: nerdamer los simplifica' };
   }
   if (rasgos.tieneVariableEnDenominador) {
     return { nivel: 2, motivo: 'funcion racional: nerdamer' };

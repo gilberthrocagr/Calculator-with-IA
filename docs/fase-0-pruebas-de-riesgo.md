@@ -69,6 +69,64 @@ los objetos y se serializan despues, los seis pasos muestran la respuesta final:
 Hay que llamar a `equation.toString()` o `equation.getAsTeX()` **dentro** del
 callback. Verificado: `pasos.every(p => p.equation === pasos[0].equation) === true`.
 
+### Dos correcciones mas, medidas el 21-sep-2026 al escribir el adaptador
+
+**5. La API NO esta en el `default`.** `mod.default` existe, pero NO trae
+`assessUserStep` ni `assessUserEquationStep`: solo doce claves. El namespace del
+modulo trae treinta y una, incluidas esas dos. Hay que quedarse con el namespace
+entero (`import * as ms`), no con el default.
+
+**6. `solveEquation` EXIGE `unknownVariable`.** Sin ella lanza `error: unset
+unknown variable name`. Medido:
+
+```
+solveEquation({equationAsText: '2x + 5 = 13'})                      -> LANZA
+solveEquation({equationAsText: '2x + 5 = 13', unknownVariable:'x'}) -> 6 pasos
+```
+
+**7. La mutacion en sitio es SOLO de `solveEquation`.** En `simplifyExpression`
+cada paso trae un `rootNode` distinto y se puede guardar sin peligro. Comprobado:
+`pasos.every(p => p.equation === pasos[0].equation)` es `true` en ecuaciones y
+`false` en expresiones.
+
+**8. El campo del paso de expresiones es `rootNode`, no `newNode`.** Un paso de
+`simplifyExpression` tiene exactamente dos claves: `changeType` y `rootNode`.
+
+### ⚠️ MATHSTEPS MIENTE SOBRE HABER RESUELTO
+
+Es el hallazgo mas importante de esta prueba, y no estaba en el brief. mathsteps
+etiqueta su ultimo paso como `solution` **aunque no haya resuelto nada**:
+
+```
+x^2 = 16          ->  2 pasos | solution: x^2 = 16        (no toco nada)
+x^2 - 5x + 6 = 0  ->  5 pasos | solution: x^2 - 5x = -6   (a medio hacer)
+x^2 - 9 = 0       ->  4 pasos | solution: x^2 = 9
+sin(x) = 1/2      ->  3 pasos | solution: sin(x) = 1/2    (no toco nada)
+```
+
+**Esto contradice al brief**, que ponia las cuadraticas factorizables en el nivel
+1 con el ejemplo `x^2=16 -> x=±4`. No es cierto en 0.9.12.
+
+Y es peor que el caso de la trigonometria: alli simplemente no avanzaba; aqui
+ademas dice que ha terminado. Un adaptador que se fie de `stepId === 'solution'`
+le ensena al alumno su propio enunciado como si fuera la respuesta.
+
+**Consecuencia de diseno:** el adaptador comprueba la FORMA del resultado
+(`pareceResuelta`) y devuelve `resuelto: false` cuando no lo es, para que el
+router escale al nivel 2 o 3. Nunca se propaga la etiqueta de mathsteps.
+
+### Los radicales numericos SI salen, y eso cambia el router
+
+```
+sqrt(8)             -> 2 sqrt(2)     KEMU_SQRT_FROM_CONST
+sqrt(12) + sqrt(3)  -> 3 * sqrt(3)
+sqrt(50)            -> 5 sqrt(2)
+sqrt(16)            -> 4             KEMU_ROOT_FROM_CONST
+```
+
+Aqui el brief acertaba. El router se afino: los radicales **sin variables** se
+quedan en el nivel 1; los que llevan variables siguen yendo al nivel 2.
+
 ### Trigonometria: no lanza, se queda callado
 
 `solveEquation('sin(x) = 1/2')` no da error: devuelve 3 pasos y la ecuacion sin

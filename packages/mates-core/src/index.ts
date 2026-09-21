@@ -9,3 +9,4 @@
 export * from './verificador/index.js';
 export * from './router/index.js';
 export * from './errores/index.js';
+export * from './motor/index.js';
