@@ -51,8 +51,8 @@ pantalla y leída en voz alta. Español primero, inglés después.
 | Fase | Qué es | Estado |
 |---|---|---|
 | 0(c) | mathsteps por ESM | **SUPERADA** |
-| 0(b) | Temml + speech-rule-engine | **PARCIAL** — verificado en Node, falta Hermes en dispositivo |
-| 0(a) | Voz simultánea en iOS | **PENDIENTE** — necesita iPhone físico |
+| 0(b) | Temml + speech-rule-engine | ❌ **FALLA** — SRE tumba la app bajo Hermes (`require("fs")`) |
+| 0(a) | Voz simultánea en iOS | ✅ **SUPERADA** (21-sep-2026, iPhone 16 Pro Max) |
 | 1 | Verificador + batería | **HECHA, 100%** |
 | 2 | Calculadora nativa | no empezada |
 | 3 | Clasificador + router + N1 | **HECHA** — router (42 tests) + adaptador N1 (17 tests) |
@@ -63,6 +63,10 @@ pantalla y leída en voz alta. Español primero, inglés después.
 | 8 | **Lanzamiento** — legal, tiendas, accesibilidad, precio | no empezada |
 
 **No se avanza de fase sin que la anterior tenga pruebas que pasen.**
+
+⚠️ **Dependencia nueva del 21-sep-2026:** como SRE no corre en el dispositivo, la
+lectura en voz alta tiene que calcularse en el servidor y cachearse. Eso significa
+que **la fase 6 (voz) ya no puede ir antes que la fase 4 (servidor)**.
 
 ⚠️ **La numeración del «Plan técnico» en PDF NO es esta.** Allí la fase 3 es el
 backend y la 4 el tutor. Cuando alguien diga «fase N», confirmar de qué documento
@@ -249,6 +253,21 @@ que suma bien pero no multiplica» no es un patrón estructural, es una elecció
 equivocada. Aritmética 5/15 — la mayoría son errores de orden de operaciones
 (`2+3*4 → 20`), que necesitan otro tipo de detector. Ahí es donde el LLM sí
 aporta, con el catálogo del área delante.
+
+## Fase 0, cerrada el 21-sep-2026 en un iPhone real
+
+- **(a) voz simultánea: SUPERADA.** La cancelación de eco funciona con
+  `iosVoiceProcessingEnabled: true`. El alumno podrá interrumpir al tutor.
+  ⚠️ Solo probado con el **altavoz**; falta con auriculares y a volumen máximo.
+  ⚠️ **La prueba daba un falso PASA** por no configurar `iosCategory:
+  playAndRecord`: al hablar el TTS, iOS apagaba el micrófono y el log salía
+  igual que si la cancelación funcionara. Ahora lleva **control positivo** y sin
+  él el veredicto es INDETERMINADO.
+- **(b) SRE bajo Hermes: FALLA.** `RCTFatalException: Requiring unknown module
+  "fs"`. En `system_external.js:30` SRE decide que está en Node porque no hay
+  `window.document`, y pide `fs`. Fatal, no atrapable. Temml sí carga.
+- **(c) mathsteps por ESM: SUPERADA** también en dispositivo — importa en
+  ~550–670 ms y da los 6 pasos con nombre de regla.
 
 ## El nivel 1 (fase 3, completa) — ⚠️ mathsteps miente
 

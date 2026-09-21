@@ -9,7 +9,7 @@
  * documentacion de los paquetes. Si algo no compila a la primera, el fallo esta
  * aqui y no en la conclusion de la prueba.
  */
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Speech from 'expo-speech';
 import {
@@ -36,10 +36,16 @@ export default function App() {
   const [estadoB, setEstadoB] = useState<Estado>('sin-probar');
   const [estadoC, setEstadoC] = useState<Estado>('sin-probar');
   const escuchadoDuranteTts = useRef<string[]>([]);
+  const escuchadoEnControl = useRef<string[]>([]);
+  const enControl = useRef(false);
   const ttsActivo = useRef(false);
 
   const anotar = useCallback((linea: string) => {
     setLog((prev) => [...prev, linea]);
+    // Espejo a la consola del proceso. Es lo que permite leer el resultado
+    // desde el Mac con `xcrun devicectl device process launch --console`,
+    // sin depender de que alguien transcriba la pantalla a mano.
+    console.log('[BANCO] ' + linea);
   }, []);
 
   // ---------------------------------------------------------------- (a) voz
@@ -48,6 +54,7 @@ export default function App() {
     if (texto.length === 0) return;
     anotar(`  oido${ttsActivo.current ? ' [MIENTRAS HABLABA EL TTS]' : ''}: "${texto}"`);
     if (ttsActivo.current) escuchadoDuranteTts.current.push(texto);
+    else if (enControl.current) escuchadoEnControl.current.push(texto);
   });
 
   useSpeechRecognitionEvent('error', (ev) => {
@@ -74,9 +81,38 @@ export default function App() {
       contextualStrings: VOCABULARIO_MATEMATICO,
       // SIN esto el microfono capta el propio altavoz. Es la bandera que se prueba.
       iosVoiceProcessingEnabled: true,
+      // ⚠️ SIN ESTO LA PRUEBA NO MIDE NADA Y DA UN FALSO "PASA".
+      // Medido el 21-sep-2026: sin configurar la sesion de audio, en cuanto
+      // Speech.speak() arranca iOS conmuta la sesion a reproduccion y el
+      // microfono DEJA DE GRABAR. El log sale "no-speech / (nada)", que es
+      // indistinguible de "la cancelacion de eco funciono". Tres pasadas
+      // dieron PASA sin haber grabado un solo byte.
+      iosCategory: {
+        category: 'playAndRecord',
+        categoryOptions: ['defaultToSpeaker', 'allowBluetooth'],
+        mode: 'measurement',
+      },
     });
-    anotar('  reconocimiento arrancado (iosVoiceProcessingEnabled: true)');
-    anotar('  NO HABLES durante los proximos segundos: solo debe sonar el movil.');
+    anotar('  reconocimiento arrancado (iosVoiceProcessingEnabled + playAndRecord)');
+
+    // ---- CONTROL POSITIVO -------------------------------------------------
+    // Antes de hacer sonar el TTS, comprobamos que el microfono OYE algo. Sin
+    // este control, "no capto el TTS" y "no capto nada" dan el mismo log, y la
+    // prueba puede pasar por el motivo equivocado.
+    escuchadoEnControl.current = [];
+    enControl.current = true;
+    anotar('');
+    anotar('  CONTROL: di algo en voz alta AHORA (5 segundos)...');
+    await new Promise((r) => setTimeout(r, 5000));
+    enControl.current = false;
+    const oidoEnControl = escuchadoEnControl.current.join(' ').trim();
+    anotar(`  control: microfono oyo "${oidoEnControl || '(nada)'}"`);
+    const microVivo = oidoEnControl.length > 0;
+    if (!microVivo) {
+      anotar('  ⚠️ el microfono no oyo NADA en el control.');
+    }
+    anotar('');
+    anotar('  Ahora CALLATE: solo debe sonar el movil.');
 
     await new Promise((r) => setTimeout(r, 1200));
 
@@ -100,8 +136,15 @@ export default function App() {
     if (seOyoASiMismo) {
       anotar('  RESULTADO: FALLA — el microfono capto el TTS. Riesgo de bucle.');
       setEstadoA('falla');
+    } else if (!microVivo) {
+      // Misma regla que el verificador: sin evidencia suficiente no se firma un
+      // veredicto. "No capto el TTS" con un microfono que no oye nada no
+      // demuestra que la cancelacion de eco funcione.
+      anotar('  RESULTADO: INDETERMINADO — el microfono no oyo nada en el control.');
+      anotar('  No se puede concluir nada: repite la prueba hablando durante el control.');
+      setEstadoA('falla');
     } else {
-      anotar('  RESULTADO: PASA — el sistema no se oyo a si mismo.');
+      anotar('  RESULTADO: PASA — el microfono oia, y aun asi no capto el TTS.');
       setEstadoA('pasa');
     }
   }, [anotar]);
@@ -167,6 +210,40 @@ export default function App() {
       setEstadoC('falla');
     }
   }, [anotar]);
+
+  // Ejecucion automatica al arrancar. Las tres pruebas son deterministas y no
+  // necesitan a nadie pulsando: lo unico que la (a) necesita de un humano es
+  // SILENCIO en la habitacion, no un dedo. Los botones siguen ahi para repetir
+  // a mano, sobre todo la (a) con y sin auriculares.
+  const yaArranco = useRef(false);
+  useEffect(() => {
+    if (yaArranco.current) return;
+    yaArranco.current = true;
+    (async () => {
+      anotar('=== ARRANQUE AUTOMATICO ===');
+      anotar('  las tres pruebas se ejecutan solas, en orden');
+      await probarMathsteps();                              // (c), la mas barata
+      await new Promise((r) => setTimeout(r, 400));
+      // ⚠️ La (b) NO va en el arranque automatico: MATA LA APP.
+      // Medido el 21-sep-2026 en un iPhone 16 Pro Max con iOS 26.6.2:
+      //   RCTFatalException: Requiring unknown module "fs"
+      // speech-rule-engine decide en system_external.js:30
+      //   fs: documentSupported || webworker ? null : nodeRequire()('fs')
+      // Bajo Hermes no hay window.document ni webworker, asi que concluye que
+      // esta en Node y pide 'fs', que no existe en React Native. Es un fallo
+      // fatal, no una excepcion que se pueda atrapar: el try/catch de
+      // probarLecturaEnVozAlta no llega a verlo.
+      // Queda como boton, para quien quiera reproducirlo.
+      anotar('');
+      anotar('  (b) NO se ejecuta sola: tumba la app. Ver el boton y el LEEME.');
+      await new Promise((r) => setTimeout(r, 400));
+      anotar('');
+      anotar('  (a) EMPIEZA AHORA: no hables durante los proximos segundos');
+      await probarVozSimultanea();                          // (a), la importante
+      anotar('');
+      anotar('=== FIN DE LAS TRES PRUEBAS ===');
+    })();
+  }, [anotar, probarMathsteps, probarLecturaEnVozAlta, probarVozSimultanea]);
 
   return (
     <View style={estilos.raiz}>

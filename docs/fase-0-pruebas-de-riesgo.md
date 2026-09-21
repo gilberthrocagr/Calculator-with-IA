@@ -1,13 +1,63 @@
 # Fase 0 — Pruebas de riesgo
 
-Estado a 20-sep-2026. Lo que dice "MEDIDO" se ejecuto de verdad y el comando esta
+Estado a 21-sep-2026. **Las tres pruebas se ejecutaron en un iPhone 16 Pro Max
+fisico con iOS 26.6.2.** Lo que dice "MEDIDO" se ejecuto de verdad y el comando esta
 anotado. Lo que dice "PENDIENTE" no se ha probado y no se da por bueno.
 
 | # | Prueba | Estado |
 |---|---|---|
-| a | TTS y reconocimiento de voz simultaneos en iOS sin realimentacion | **PENDIENTE — necesita iPhone real** |
-| b | speech-rule-engine + Temml | **PARCIAL — cadena verificada en Node, falta Hermes en dispositivo** |
-| c | mathsteps-experimental-fork importando por ESM | **SUPERADA** |
+| a | TTS y reconocimiento de voz simultaneos en iOS sin realimentacion | **SUPERADA** (21-sep-2026, dispositivo real) |
+| b | speech-rule-engine + Temml | **FALLA** — SRE tumba la app bajo Hermes |
+| c | mathsteps-experimental-fork importando por ESM | **SUPERADA**, tambien en dispositivo |
+
+---
+
+## (a) Voz simultanea en iOS — SUPERADA
+
+iPhone 16 Pro Max, iOS 26.6.2, altavoz del telefono (sin auriculares).
+
+```
+control: microfono oyo "Hola Hola de micro"      <- el microfono ESTA VIVO
+  Ahora CALLATE: solo debe sonar el movil.
+oido: "Control de microfono 123"                  <- sigue transcribiendo
+  el TTS dice: "equis al cuadrado mas dos equis mas uno"
+  transcrito mientras hablaba: "(nada)"           <- NO capto el TTS
+RESULTADO: PASA
+```
+
+**La cancelacion de eco de iOS funciona con `iosVoiceProcessingEnabled: true`.**
+El alumno podra interrumpir al tutor mientras habla. Era el riesgo numero uno del
+proyecto y queda despejado.
+
+### ⚠️ LA TRAMPA QUE CASI NOS DA UN FALSO "PASA"
+
+La primera version de esta prueba **daba PASA sin medir nada**, tres veces
+seguidas, una de ellas con un Mac hablando a todo volumen al lado.
+
+La causa: arrancaba el reconocimiento **sin configurar la sesion de audio**. En
+cuanto `Speech.speak()` empieza, iOS conmuta la sesion a reproduccion y el
+microfono DEJA DE GRABAR. El log sale `no-speech / (nada)`, que es
+**indistinguible** de "la cancelacion de eco funciono".
+
+Faltaba esto, que el brief si especificaba:
+
+```js
+iosCategory: {
+  category: 'playAndRecord',
+  categoryOptions: ['defaultToSpeaker', 'allowBluetooth'],
+  mode: 'measurement',
+}
+```
+
+**Y la leccion general: la prueba necesitaba un CONTROL POSITIVO.** Ahora escucha
+5 segundos antes del TTS y exige haber oido algo; si no oyo nada, el veredicto es
+**INDETERMINADO**, nunca PASA. Es la misma regla que gobierna el verificador: sin
+evidencia suficiente no se firma un veredicto.
+
+### Lo que NO se ha medido
+
+Solo se probo con el **altavoz del telefono**. Falta repetirlo con auriculares y
+con el volumen al maximo, que es como lo usara un alumno haciendo deberes.
 
 ---
 
@@ -148,7 +198,42 @@ que bloquear sin/cos/tan/log/ln/exp ANTES del nivel 1**, no solo antes de nerdam
 
 ---
 
-## (b) Temml + speech-rule-engine — PARCIAL
+## (b) Temml + speech-rule-engine — ❌ FALLA EN DISPOSITIVO
+
+**Medido el 21-sep-2026 en un iPhone 16 Pro Max con iOS 26.6.2, build de Release
+con bytecode de Hermes real. La app MUERE:**
+
+```
+*** Terminating app due to uncaught exception 'RCTFatalException:
+    Unhandled JS Exception: Error: Requiring unknown module "fs".'
+App terminated due to signal 6.
+```
+
+La linea culpable, en `speech-rule-engine/js/common/system_external.js:30`:
+
+```js
+fs: documentSupported || webworker ? null : nodeRequire()('fs'),
+```
+
+SRE decide donde se ejecuta mirando si existe `window.document` o si es un
+webworker. Bajo Hermes no hay ninguno de los dos, asi que concluye "estoy en
+Node", llama a `require('fs')`, y como en React Native no existe, la app se cae.
+**Es un fallo fatal, no una excepcion que se pueda atrapar**: el try/catch de la
+prueba no llega a verlo.
+
+Temml, en cambio, carga sin problema.
+
+### Que hacer con esto
+
+1. **Plan B del brief, ascendido a plan A:** ejecutar SRE en el servidor y
+   cachear las cadenas de lectura. Las expresiones de un temario son finitas.
+   ⚠️ Esto crea una dependencia nueva: **la voz ya no puede ir antes que el
+   servidor** en el orden de fases.
+2. **Alternativa sin probar:** enganar a SRE definiendo `window.document` para
+   que se crea un navegador, ponga `fs = null` y cargue sus mathmaps por fetch.
+   Ahorraria la dependencia de red, pero podria fallar mas adelante.
+
+## (b) — medicion previa en Node (sigue siendo valida)
 
 `temml@0.13.5`, `speech-rule-engine@5.0.0-rc.4`. **Ojo: SRE va por release
 candidate, no por estable.**
