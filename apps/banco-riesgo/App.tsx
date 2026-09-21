@@ -42,6 +42,11 @@ export default function App() {
 
   const anotar = useCallback((linea: string) => {
     setLog((prev) => [...prev, linea]);
+    // En una build de RELEASE el console.log no llega a ninguna parte: ni a
+    // Metro (no hay servidor) ni a la consola del proceso. Y Release es la
+    // unica forma de medir SRE sin que Metro estorbe con sus trozos diferidos.
+    // Asi que el log se manda por red al Mac, que escucha en el puerto 8099.
+    fetch('http://192.168.1.66:8099/log', { method: 'POST', body: linea }).catch(() => {});
     // Espejo a la consola del proceso. Es lo que permite leer el resultado
     // desde el Mac con `xcrun devicectl device process launch --console`,
     // sin depender de que alguien transcriba la pantalla a mano.
@@ -155,10 +160,67 @@ export default function App() {
     anotar('');
     anotar('=== (b) Temml + speech-rule-engine bajo Hermes ===');
     try {
+      // ⚠️ LOS PARCHES VAN AQUI, ANTES DE CUALQUIER import().
+      //
+      // MEDIDO: ponerlos entre el import de temml y el de SRE NO sirve. En una
+      // build de Release, Metro mete Temml y SRE en el MISMO trozo, asi que
+      // `import('temml')` ya evalua system_external.js de SRE y la app muere
+      // antes de que los parches existan. El log se corta justo despues de la
+      // cabecera de la prueba, sin llegar a "temml cargado".
+      const w = globalThis as unknown as {
+        document?: unknown;
+        process?: { versions?: { node?: string } };
+      };
+      const habiaDocument = 'document' in w;
+      if (!habiaDocument) w.document = {};
+
+      // SEGUNDO PARCHE, y el que de verdad importa. SRE tiene varios escapes a
+      // Node, no solo 'fs': con el parche de document la app seguia muriendo en
+      // extRequire con Requiring unknown module "process". Taparlos uno a uno es
+      // un juego sin fin.
+      //
+      // Pero SRE YA TRAE un stub seguro; solo hay que hacer que lo elija:
+      //   const nodeRequire = () => {
+      //     if (__non_webpack_require__ !== undefined) return __non_webpack_require__;
+      //     if (process?.versions?.node != null && require !== undefined) return require;
+      //     return (_file) => null;        <- este
+      //   }
+      // React Native define un process con versions.node, asi que SRE coge el
+      // require de Metro y pide modulos que no existen. Quitando versions.node,
+      // cae al stub y TODAS sus llamadas a Node devuelven null sin reventar.
+      const nodeAntes = w.process?.versions?.node;
+      if (w.process?.versions) delete w.process.versions.node;
+      anotar(`  parches puestos (document nuevo: ${!habiaDocument}, process.versions.node era: ${nodeAntes ?? 'nada'})`);
+
       const t0 = Date.now();
       const temml = await import('temml');
-      const sre = await import('speech-rule-engine');
-      anotar(`  modulos cargados en ${Date.now() - t0} ms`);
+      anotar(`  temml cargado en ${Date.now() - t0} ms`);
+
+      // ⚠️ EL PARCHE QUE DECIDE SI SRE PUEDE VIVIR EN EL DISPOSITIVO.
+      //
+      // Sin el, la app MUERE al importar SRE:
+      //   RCTFatalException: Requiring unknown module "fs"
+      // porque en system_external.js:30 hace
+      //   fs: documentSupported || webworker ? null : nodeRequire()('fs')
+      // y bajo Hermes no hay window.document, asi que concluye que esta en Node.
+      //
+      // La comprobacion que hace es solo `typeof window.document === 'undefined'`,
+      // asi que basta con definirlo. Entonces pone fs = null y busca sus mathmaps
+      // en Variables.url, que es el CDN de jsDelivr.
+      //
+      // Se pone y se quita alrededor del import para no confundir a otras
+      // librerias, que usan la presencia de document para decidir si estan en un
+      // navegador.
+
+      let sre: typeof import('speech-rule-engine');
+      const t1 = Date.now();
+      try {
+        sre = await import('speech-rule-engine');
+        anotar(`  SRE cargado en ${Date.now() - t1} ms — EL PARCHE FUNCIONA`);
+      } finally {
+        if (!habiaDocument) delete w.document;
+        if (nodeAntes !== undefined && w.process?.versions) w.process.versions.node = nodeAntes;
+      }
 
       await sre.setupEngine({
         locale: 'es', domain: 'clearspeak', style: 'default', modality: 'speech',
@@ -171,6 +233,7 @@ export default function App() {
         anotar('  (confirmado: ClearSpeak no existe en espanol, cae a mathspeak)');
       }
 
+      anotar('  (los mathmaps se descargan del CDN de jsDelivr: hace falta red)');
       for (const latex of ['x^2 + 2x + 1', '\\frac{2}{4}', '\\sqrt{x+1}']) {
         const t1 = Date.now();
         const mathml = temml.renderToString(latex);
@@ -234,8 +297,11 @@ export default function App() {
       // fatal, no una excepcion que se pueda atrapar: el try/catch de
       // probarLecturaEnVozAlta no llega a verlo.
       // Queda como boton, para quien quiera reproducirlo.
+      // ⚠️ La (b) NO va en el arranque automatico: MATA LA APP, y ningun parche
+      // desde fuera lo evita. Ver el LEEME y docs/fase-0-pruebas-de-riesgo.md.
+      // Queda como boton, para quien quiera reproducirlo.
       anotar('');
-      anotar('  (b) NO se ejecuta sola: tumba la app. Ver el boton y el LEEME.');
+      anotar('  (b) no se ejecuta sola: tumba la app. Es un resultado, no un fallo.');
       await new Promise((r) => setTimeout(r, 400));
       anotar('');
       anotar('  (a) EMPIEZA AHORA: no hables durante los proximos segundos');

@@ -235,15 +235,54 @@ prueba no llega a verlo.
 
 Temml, en cambio, carga sin problema.
 
+### Se intento salvarlo, y NO se puede desde fuera
+
+Cuatro intentos, cada uno moviendo el fallo un poco mas adelante:
+
+| Intento | Resultado |
+|---|---|
+| Release, sin parches | 💀 `Requiring unknown module "fs"` |
+| Debug + parche `window.document` | ⚠️ No muere; falla en el polyfill de Metro (`importedAll`) |
+| Release + parche `window.document` | 💀 `Requiring unknown module "process"` — otro agujero |
+| Release + `document` + `process.versions.node`, antes de todo import | 💀 Igual |
+
+**Por que no funciona, medido.** El paquete NO tiene `exports`, asi que Metro
+carga su `main`: `lib/sre.js`, un bundle minificado cuya condicion **no es la de
+las fuentes de `js/`**:
+
+```js
+S = () => "undefined" != typeof require                       // <- A
+        || "undefined" != typeof process && null != process.versions?.node
+           && "undefined" != typeof require                   // <- B
+        ? require : t => null                                 // <- el stub seguro
+```
+
+Es `(A || B) ? require : stub`, y **A es solo `typeof require !== 'undefined'`**.
+Metro inyecta `require` en todos los modulos, asi que A siempre se cumple y el
+stub seguro **es inalcanzable**. De ahi que el parche de `process.versions.node`
+no sirviera: la primera clausula cortocircuita.
+
+Dos detalles mas que costaron una compilacion cada uno:
+
+- **Los parches hay que ponerlos antes de CUALQUIER `import()`.** En Release
+  Metro mete Temml y SRE en el mismo trozo, asi que `import('temml')` ya evalua
+  `system_external.js` de SRE.
+- **En React Native `process.versions.node` ya viene sin definir.** Medido:
+  `process.versions.node era: nada`. La hipotesis de partida era falsa.
+
 ### Que hacer con esto
 
 1. **Plan B del brief, ascendido a plan A:** ejecutar SRE en el servidor y
    cachear las cadenas de lectura. Las expresiones de un temario son finitas.
    ⚠️ Esto crea una dependencia nueva: **la voz ya no puede ir antes que el
    servidor** en el orden de fases.
-2. **Alternativa sin probar:** enganar a SRE definiendo `window.document` para
-   que se crea un navegador, ponga `fs = null` y cargue sus mathmaps por fetch.
-   Ahorraria la dependencia de red, pero podria fallar mas adelante.
+2. **Vendorizar SRE y parchear `lib/sre.js`** para que la condicion deje
+   alcanzable el stub. Es la unica via que arregla la causa, pero ata el proyecto
+   a mantener un fork de un paquete que va por release candidate.
+3. **Aliasar los modulos de Node en el resolver de Metro** (`fs`, `process`...)
+   a un modulo vacio. No toca SRE, pero entonces cargaria sus mathmaps del CDN de
+   jsDelivr por red en cada arranque — una dependencia de red que el plan del
+   servidor ya resuelve mejor, y con cache.
 
 ## (b) — medicion previa en Node (sigue siendo valida)
 

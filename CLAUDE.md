@@ -263,9 +263,15 @@ aporta, con el catálogo del área delante.
   playAndRecord`: al hablar el TTS, iOS apagaba el micrófono y el log salía
   igual que si la cancelación funcionara. Ahora lleva **control positivo** y sin
   él el veredicto es INDETERMINADO.
-- **(b) SRE bajo Hermes: FALLA.** `RCTFatalException: Requiring unknown module
-  "fs"`. En `system_external.js:30` SRE decide que está en Node porque no hay
-  `window.document`, y pide `fs`. Fatal, no atrapable. Temml sí carga.
+- **(b) SRE bajo Hermes: FALLA, y no tiene arreglo desde fuera.** Cuatro
+  intentos de parche, todos muertos. La causa real: Metro carga el `main` del
+  paquete, `lib/sre.js`, un bundle cuya condición es
+  `(typeof require !== 'undefined' || ...) ? require : stub`. Metro inyecta
+  `require` en todos los módulos, así que **el stub seguro es inalcanzable** y
+  SRE siempre pide módulos de Node. Salidas: servidor + caché (recomendada),
+  vendorizar SRE, o aliasar los builtins en el resolver de Metro.
+  ⚠️ Los parches hay que ponerlos antes de CUALQUIER `import()`: en Release
+  Metro agrupa Temml y SRE en el mismo trozo.
 - **(c) mathsteps por ESM: SUPERADA** también en dispositivo — importa en
   ~550–670 ms y da los 6 pasos con nombre de regla.
 
