@@ -15,6 +15,6 @@
       "package": "com.pasoapaso.bancoriesgo",
       "permissions": ["android.permission.RECORD_AUDIO"]
     },
-    "plugins": ["expo-dev-client", "@jamsch/expo-speech-recognition"]
+    "plugins": ["expo-dev-client", "expo-speech-recognition"]
   }
 }

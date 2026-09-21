@@ -3,3 +3,8 @@ dist/
 *.tsbuildinfo
 .expo/
 coverage/
+
+# Proyecto nativo generado por expo prebuild: se regenera, no se versiona
+apps/banco-riesgo/ios/
+apps/banco-riesgo/android/
+apps/banco-riesgo/node_modules/

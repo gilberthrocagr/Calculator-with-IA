@@ -15,7 +15,7 @@ import * as Speech from 'expo-speech';
 import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
-} from '@jamsch/expo-speech-recognition';
+} from 'expo-speech-recognition';
 
 /** Frase que dira el TTS. Si el reconocedor la transcribe, la prueba (a) FALLA. */
 const FRASE_TTS = 'equis al cuadrado más dos equis más uno';
