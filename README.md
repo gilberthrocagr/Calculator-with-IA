@@ -16,6 +16,7 @@ packages/mates-core/     Logica matematica. TypeScript puro, SIN React Native:
                          la bateria corre en CI en segundos, sin simulador.
   src/verificador/       Verificador de pasos en tres capas
   src/router/            Clasificador y router: que motor atiende cada entrada
+  src/errores/           Catalogo de errores tipicos, detectados sin LLM
   src/bateria/           271 casos del curriculo
 apps/banco-riesgo/       Banco de pruebas de la fase 0 (no es la app)
 docs/                    Resultados medidos
@@ -29,6 +30,7 @@ docs/                    Resultados medidos
 | 1 | Verificador + bateria en CI | **271/271, 100% deteccion, 100% aceptacion** |
 | 2 | Calculadora nativa | no empezada |
 | 3 | Clasificador, router, nivel 1 | **router hecho, 38 tests**; falta el adaptador N1 |
+| 5 | Tutor: catalogo de errores | **catalogo hecho, 40% medido**; faltan maquina de estados y escalera |
 | 4 | Servidor, SymPy, streaming | no empezada |
 | 5 | Voz | no empezada |
 
@@ -67,6 +69,39 @@ simplifica si no.
 El **area del temario** es solo una pista para la interfaz y las metricas: el
 router **no** la usa para enrutar. De una expresion suelta no se deduce si el
 alumno queria factorizar o expandir, asi que sin senal clara vale `desconocida`.
+
+## El catalogo de errores
+
+Detecta el error concreto del alumno **sin gastar un token**. No adivina: para
+cada error del catalogo predice que habria escrito el alumno si lo hubiera
+cometido, y compara esa prediccion con lo que escribio usando el verificador.
+Un diagnostico afirmado esta **probado**, no supuesto, y la prediccion queda
+guardada para poder auditarlo.
+
+**Medido sobre la bateria** (21-sep-2026): explica **46 de los 115 pasos malos
+(40,0%)** con **0 falsos positivos sobre los 156 pasos buenos**.
+
+El cero es el numero que manda. Acusar a un alumno de un error que no cometio es
+peor que no diagnosticar nada: rompe su confianza justo cuando acaba de hacerlo
+bien. La cobertura se sube despues; un falso positivo no se perdona. Cuando
+ningun patron encaja, la respuesta es "no lo se" y el tutor pregunta.
+
+Doce patrones, en dos familias: los de expresiones (linealidad ilusoria,
+distribucion parcial, signo al distribuir, cancelacion ilegal, terminos no
+semejantes, operaciones de fracciones en linea, reglas de exponentes mezcladas,
+coeficientes multiplicados) y los de ecuaciones, que van por otro camino porque
+mathjs lee el `=` como asignacion (transposicion sin cambio de signo, balance
+roto).
+
+Cada entrada del catalogo nombra la **creencia**, no el sintoma: en la cabeza del
+alumno hay una regla, y si el tutor no la nombra, la regla sobrevive y el error
+vuelve al ejercicio siguiente. Ante linealidad ilusoria y cancelacion ilegal la
+respuesta por defecto es un **contraejemplo numerico** calculado, no el enunciado
+de la regla correcta: `(3+4)^2 = 49` pero `9+16 = 25`.
+
+`erroresDelArea(area)` existe por un numero: un LLM acierta el diagnostico el
+**52,96%** con el catalogo entero delante y el **73,82%** restringido al tema del
+problema. Al prompt del tutor nunca se le pasan los doce, solo los de su area.
 
 ## El verificador
 

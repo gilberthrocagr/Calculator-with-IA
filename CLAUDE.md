@@ -19,11 +19,30 @@ problema (aritmética, fracciones, álgebra, precálculo) y la app lo resuelve
 **mostrando los pasos**. Entrada por teclado matemático, chat y voz. Salida en
 pantalla y leída en voz alta. Español primero, inglés después.
 
-## La regla de arquitectura
+## Las cuatro invariantes de diseño
 
-> **El modelo de lenguaje NUNCA calcula.** Solo traduce lo que el estudiante
-> escribió o dijo a una expresión matemática, y narra. Quien resuelve es un CAS.
-> **Si el LLM produce un número, es un bug.**
+**1. El modelo de lenguaje NUNCA calcula.**
+> Solo traduce lo que el estudiante escribió o dijo a una expresión matemática,
+> y narra. Quien resuelve es un CAS. **Si el LLM produce un número, es un bug.**
+
+**2. Ningún paso se muestra sin verificar.**
+> Los benchmarks públicos miden la respuesta final, no la corrección de los pasos
+> intermedios. Una app que muestra pasos expone justo lo que nadie mide.
+
+**3. La pedagogía vive en código, no en el prompt.**
+> Una máquina de estados decide qué nivel de pista toca; el prompt es solo la capa
+> de tono. El equipo de Harvard lo dice literal tras lograr d=0,63: «a system
+> prompt could not reliably provide enough structure to scaffold problems».
+> Medido (PNAS 2025, ~1.000 alumnos): un LLM sin guardarraíles da **+48% de
+> rendimiento durante la práctica y −17% en el examen sin ayuda**, y el alumno no
+> percibe la degradación. Con guardarraíles el daño desaparece. Los guardarraíles
+> que funcionaron no son de tono: solución verificada inyectada en el prompt,
+> pistas incrementales y catálogo de errores típicos.
+
+**4. La expresión reconocida se confirma antes de resolver.**
+> El reconocimiento de voz tiene **29–35% de error en fórmulas** (hasta 35% con
+> voces infantiles). Renderizar lo entendido y pedir un toque convierte un error
+> silencioso en una corrección barata. No es un extra de UX, es un requisito.
 
 ---
 
@@ -38,9 +57,20 @@ pantalla y leída en voz alta. Español primero, inglés después.
 | 2 | Calculadora nativa | no empezada |
 | 3 | Clasificador + router + N1 | **clasificador y router HECHOS** (38 tests); falta el adaptador N1 |
 | 4 | Servidor + SymPy + streaming | no empezada |
-| 5 | Voz | no empezada |
+| 5 | **Tutor** — máquina de estados, escalera de pistas, catálogo de errores | **catálogo de errores HECHO** (16 tests, 40% medido); faltan máquina de estados y escalera |
+| 6 | Voz | no empezada |
+| 7 | **Foto / OCR** del cuaderno | no empezada |
+| 8 | **Lanzamiento** — legal, tiendas, accesibilidad, precio | no empezada |
 
 **No se avanza de fase sin que la anterior tenga pruebas que pasen.**
+
+⚠️ **La numeración del «Plan técnico» en PDF NO es esta.** Allí la fase 3 es el
+backend y la 4 el tutor. Cuando alguien diga «fase N», confirmar de qué documento
+habla. Esta tabla es la que manda en el repo.
+
+Las fases 5, 7 y 8 se añadieron el 21-sep-2026 al revisar el plan en PDF: no
+existían en el roadmap y son producto, no extras. La 5 es la que convierte esto
+de «calculadora que explica» en tutor.
 
 ---
 
@@ -56,7 +86,7 @@ Tiene que dar exactamente: **271 casos, 100% de detección (115/115), 100% de
 aceptación (156/156), 34 tests en verde.** Si no da eso, **parar y avisar antes
 de tocar nada**.
 
-Última verificación: **20-sep-2026, todo en verde** (72/72, 115/115, 156/156).
+Última verificación: **21-sep-2026, todo en verde** (88/88, 115/115, 156/156).
 `npm run typecheck` también pasa. Medido en esta máquina: **~4,9 ms por paso**
 (el README decía 9,6 ms de una máquina más lenta; ya está actualizado. El test
 solo exige estar por debajo de 25 ms).
@@ -186,6 +216,69 @@ red**: devuelve la decisión con su motivo y sus rasgos.
 Lo que falta de la fase 3: el **adaptador N1** de mathsteps, con la trampa del
 objeto `Equation` mutable resuelta (llamar a `toString()` dentro del callback).
 
+## El catálogo de errores (fase 5, primera pieza)
+
+`packages/mates-core/src/errores/`. Detecta el error concreto del alumno **sin
+LLM**. Es el primero de los tres guardarraíles que, medidos en PNAS 2025,
+eliminaron el daño al aprendizaje.
+
+**Cómo funciona, y por qué es fiable:** no adivina el error. Para cada entrada del
+catálogo **predice** qué habría escrito el alumno si hubiera cometido ese error, y
+compara la predicción con lo que escribió usando el verificador de tres capas. Un
+diagnóstico afirmado está **probado**; la predicción queda guardada para auditarlo.
+
+**Medido el 21-sep-2026: 46/115 pasos malos explicados (40,0%), 0 falsos
+positivos sobre 156 pasos buenos.**
+
+- ⚠️ **El cero es el número que manda.** Acusar a un alumno de un error que no
+  cometió es peor que no diagnosticar: rompe su confianza justo cuando acaba de
+  hacerlo bien. Hay test que lo fija. La cobertura es un suelo, no un objetivo.
+- Cuando ningún patrón encaja, `errores` viene vacío y `hayError` es `true`: el
+  paso está mal pero no sabemos por qué, y el tutor **pregunta** en vez de afirmar.
+- Si el verificador dice INDETERMINADO, no se diagnostica nada.
+- Las **ecuaciones van por otro camino**: mathjs lee el `=` como asignación y
+  lanza, así que hay que partirlas con `partirEcuacion` antes de predecir.
+- Cada entrada nombra la **creencia**, no el síntoma. Si el tutor no nombra la
+  regla que el alumno cree tener, la regla sobrevive y el error vuelve.
+- `erroresDelArea(area)` existe por un número: el LLM acierta el diagnóstico el
+  **52,96%** con el catálogo entero y el **73,82%** restringido al tema. Nunca
+  pasarle los doce al prompt, solo los de su área.
+
+**Lo que no cubre y por qué** (medido, no supuesto): factorización 0/9 — «pareja
+que suma bien pero no multiplica» no es un patrón estructural, es una elección
+equivocada. Aritmética 5/15 — la mayoría son errores de orden de operaciones
+(`2+3*4 → 20`), que necesitan otro tipo de detector. Ahí es donde el LLM sí
+aporta, con el catálogo del área delante.
+
+## El servidor (fase 4) — y cómo NO tocar Deliservy
+
+Hoy **no hay nada alojado** y no hace falta: `mates-core` es puro y no abre red.
+Cuando toque son dos piezas, ~8 USD/mes:
+
+| Pieza | Dónde | Coste |
+|---|---|---|
+| Proxy del modelo (guarda la API key, streaming, caché) | Cloudflare Workers | ~5 USD/mes |
+| Servicio SymPy (nivel 3) | Fly.io `shared-cpu-1x` **512 MB** | ~3,19 USD/mes |
+
+512 MB, no 256: SymPy ocupa 62 MB de RSS y con 256 queda demasiado justo.
+
+**Las cinco separaciones obligatorias** (regla de Gilberth, dicha tres veces):
+
+1. **Máquina nueva.** Nada de la VM de Deliservy, ni su nginx, ni su pm2.
+2. **Cuentas propias** en Cloudflare y Fly, con su propio método de pago.
+3. **Dominio propio.** Nada de un subdominio bajo el dominio de Deliservy.
+4. **Credenciales propias**: clave SSH, secretos y variables de entorno aparte.
+5. **⚠️ Cuenta y API key de Anthropic PROPIAS.** Es la única que puede afectar de
+   verdad a Deliservy: la key es **de organización**, así que compartirla haría
+   que el consumo de la calculadora se comiera el saldo de Alisa y que ambas
+   compartieran los límites de peticiones por minuto. Un pico de tráfico escolar
+   dejaría a Alisa sin responder en producción sin que nadie tocara nada.
+
+**Dónde está el dinero de verdad:** medido en el plan, a 900.000 consultas/mes los
+tokens del modelo son el **99,2%** de la factura y todo el hosting junto el
+**0,09%**. Elegir servidor por sus propiedades técnicas, no por el precio;
+optimizar `max_tokens` y la tasa de acierto de caché vale cien veces más.
+
 ## Decisiones abiertas
 
 - **El nombre.** El repo en GitHub es `Calculator-with-IA`, pero dentro el paquete
@@ -195,3 +288,14 @@ objeto `Equation` mutable resuelta (llamar a `toString()` dentro del callback).
 - **El bundle id de la app.** Ahora es `com.pasoapaso.bancoriesgo` en
   `apps/banco-riesgo/app.json`. Hay que poner el dominio real antes de publicar
   nada en las tiendas.
+- **⚠️ ¿Tutor adaptativo en la UE?** El Anexo III del AI Act clasifica como **alto
+  riesgo** los sistemas que evalúan resultados del aprendizaje «incluido cuando
+  dichos resultados se utilizan para orientar el proceso de aprendizaje». Un
+  solucionador que solo explica pasos no cae; un tutor que estima dominio por
+  skill y decide qué practicar, probablemente sí. Es decisión de **arquitectura**,
+  no de empaquetado: hay que tomarla antes de construir el knowledge tracing de la
+  fase 5. Consulta legal obligatoria.
+- **¿Cuadráticas factorizables y radicales numéricos en el nivel 1?** El plan en
+  PDF los pone en nivel 1 (`x²=16 → x=±4`, `√8 → 2√2` por reglas KEMU). Nuestro
+  router los manda al nivel 2, más conservador. **No lo hemos medido nosotros**:
+  se resuelve al construir el adaptador N1, probando contra mathsteps de verdad.
