@@ -16,14 +16,26 @@ anotado. Lo que dice "PENDIENTE" no se ha probado y no se da por bueno.
 
 iPhone 16 Pro Max, iOS 26.6.2, altavoz del telefono (sin auriculares).
 
+Repetida en condiciones controladas: la unica fuente de sonido en la ventana de
+control fue un Mac hablando de t=1,8s a t=6,5s, y silencio absoluto despues, para
+que el tramo del TTS midiera lo que debe medir.
+
 ```
-control: microfono oyo "Hola Hola de micro"      <- el microfono ESTA VIVO
+CONTROL: di algo en voz alta AHORA (5 segundos)...
+  oido: "Control"
+  oido: "Control de"
+  oido: "Control de microfono"
+  oido: "Control de microfono 123"
+  oido: "Control de microfono 12345"      <- 8 transcripciones progresivas
   Ahora CALLATE: solo debe sonar el movil.
-oido: "Control de microfono 123"                  <- sigue transcribiendo
   el TTS dice: "equis al cuadrado mas dos equis mas uno"
-  transcrito mientras hablaba: "(nada)"           <- NO capto el TTS
-RESULTADO: PASA
+  transcrito mientras hablaba: "(nada)"   <- NO capto el TTS
+RESULTADO: PASA — el microfono oia, y aun asi no capto el TTS.
 ```
+
+Las ocho transcripciones progresivas son la prueba de que el microfono no solo
+estaba abierto, sino transcribiendo activamente hasta el instante anterior al
+TTS. Durante el TTS, cero.
 
 **La cancelacion de eco de iOS funciona con `iosVoiceProcessingEnabled: true`.**
 El alumno podra interrumpir al tutor mientras habla. Era el riesgo numero uno del
