@@ -1,11 +1,10 @@
 # Como poner esto en un repo propio
 
-Este codigo no tiene ninguna relacion con Deliservy: ni nombres, ni colores de
-marca, ni dependencias. Es un proyecto independiente.
+Proyecto independiente, sin dependencias externas de marca.
 
 ## 1. Crea el repo vacio
 
-En GitHub, **con tu cuenta personal, no con la organizacion de Deliservy**.
+En GitHub, **con tu cuenta personal**.
 Privado. Sin README, sin .gitignore, sin licencia (ya vienen aqui).
 
 ## 2. Sube esto
