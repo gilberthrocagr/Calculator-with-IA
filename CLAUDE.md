@@ -2,11 +2,7 @@
 
 Contexto permanente del proyecto. Léelo antes de tocar nada.
 
-> ⛔ **Este proyecto NO tiene ninguna relación con Deliservy.** No toques, clones
-> ni leas nada de la organización `sistemas-deliservy`. Ni código, ni credenciales,
-> ni memoria. Son mundos separados.
-
-- **Repo:** https://github.com/gilberthrocagr/Calculator-with-IA (privado, cuenta personal)
+- **Repo:** https://github.com/gilberthrocagr/Calculator-with-IA (cuenta personal)
 - **Ruta local:** `~/proyectos/calculator-with-ia`
 - **Idioma:** todo el código, los comentarios, los commits y los textos en **español**.
 
@@ -308,7 +304,7 @@ Otras cuatro cosas medidas, ninguna en el brief:
 Y el router se afinó con lo medido: **radicales sin variables → nivel 1**
 (`sqrt(8) → 2 sqrt(2)`, KEMU); con variables → nivel 2. Cuadráticas → nivel 2.
 
-## El servidor (fase 4) — y cómo NO tocar Deliservy
+## El servidor (fase 4)
 
 Hoy **no hay nada alojado** y no hace falta: `mates-core` es puro y no abre red.
 Cuando toque son dos piezas, ~8 USD/mes:
@@ -320,22 +316,13 @@ Cuando toque son dos piezas, ~8 USD/mes:
 
 512 MB, no 256: SymPy ocupa 62 MB de RSS y con 256 queda demasiado justo.
 
-**Las cinco separaciones obligatorias** (regla de Gilberth, dicha tres veces):
+**Infraestructura propia e independiente:**
 
-1. **Máquina nueva.** Nada de la VM de Deliservy, ni su nginx, ni su pm2.
+1. **Máquina propia**, dedicada solo a este proyecto.
 2. **Cuentas propias** en Cloudflare y Fly, con su propio método de pago.
-3. **Dominio propio.** Nada de un subdominio bajo el dominio de Deliservy.
+3. **Dominio propio.**
 4. **Credenciales propias**: clave SSH, secretos y variables de entorno aparte.
-5. **⚠️ Cuenta y API key de Anthropic PROPIAS.** Es la única que puede afectar de
-   verdad a Deliservy: la key es **de organización**, así que compartirla haría
-   que el consumo de la calculadora se comiera el saldo de Alisa y que ambas
-   compartieran los límites de peticiones por minuto. Un pico de tráfico escolar
-   dejaría a Alisa sin responder en producción sin que nadie tocara nada.
-
-**Dónde está el dinero de verdad:** medido en el plan, a 900.000 consultas/mes los
-tokens del modelo son el **99,2%** de la factura y todo el hosting junto el
-**0,09%**. Elegir servidor por sus propiedades técnicas, no por el precio;
-optimizar `max_tokens` y la tasa de acierto de caché vale cien veces más.
+5. **Cuenta y API key de Anthropic propias**, con su propio límite de gasto.
 
 ## Decisiones abiertas
 
